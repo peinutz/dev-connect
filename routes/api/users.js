@@ -7,12 +7,28 @@ const jwt = require("jsonwebtoken");
 const keys = require("../../config/keys");
 const passport = require("passport");
 
-router.get("/test", (req, res) => res.json({ msg: "users works" }));
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
+
+router.get("/test", (req, res) => res.json({
+  msg: "users works"
+}));
 
 //@route Get api/users/register
 //@desc register user
 router.post("/register", (req, res) => {
-  User.findOne({ email: req.body.email }).then(user => {
+  const {
+    errors,
+    isValid
+  } = validateRegisterInput(req.body);
+
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
+  User.findOne({
+    email: req.body.email
+  }).then(user => {
     if (user) {
       return res.status(400).json("merda");
     } else {
@@ -48,23 +64,42 @@ router.post("/register", (req, res) => {
 // @desc Login User / Return JWT Token
 // @access Public
 router.post("/login", (req, res) => {
+
+  const {
+    errors,
+    isValid
+  } = validateLoginInput(req.body);
+
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   const email = req.body.email;
   const password = req.body.password;
 
-  User.findOne({ email }).then(user => {
+  User.findOne({
+    email
+  }).then(user => {
     console.log(user);
     if (!user) {
-      return res.status(404).json({ email: "User email not found" });
+      return res.status(404).json({
+        email: "User email not found"
+      });
     }
 
     bcrypt.compare(password, user.password).then(isMatch => {
       if (isMatch) {
-        const payload = { id: user.id, name: user.name, avatar: user.avatar };
+        const payload = {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar
+        };
 
         jwt.sign(
           payload,
-          keys.secretOrPrivateKey,
-          { expiresIn: 36000 },
+          keys.secretOrPrivateKey, {
+            expiresIn: 36000
+          },
           (err, token) => {
             console.log(token);
             console.log(err);
@@ -75,7 +110,9 @@ router.post("/login", (req, res) => {
           }
         );
       } else {
-        return res.status(400).json({ password: "Password invalid" });
+        return res.status(400).json({
+          password: "Password invalid"
+        });
       }
     });
   });
@@ -86,7 +123,9 @@ router.post("/login", (req, res) => {
 // @access private
 router.get(
   "/current",
-  passport.authenticate("jwt", { session: false }),
+  passport.authenticate("jwt", {
+    session: false
+  }),
   (req, res) => {
     res.json(req.user);
   }
